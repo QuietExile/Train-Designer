@@ -15,6 +15,8 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            padding: 1rem; /* Add some padding for smaller screens */
+            box-sizing: border-box; /* Include padding in element's total width/height */
         }
         .container {
             background-color: #ffffff;
@@ -27,6 +29,11 @@
             flex-direction: column;
             gap: 1.5rem;
             box-sizing: border-box;
+        }
+        @media (min-width: 768px) { /* Adjust for larger screens */
+            .container {
+                max-width: 1024px; /* Max width for desktop */
+            }
         }
         .option-panel, .train-display {
             border: 1px solid #e2e8f0;
@@ -42,6 +49,7 @@
             flex-wrap: nowrap; /* Prevent wrapping if too many images for one line */
             overflow-x: auto; /* Allow horizontal scrolling if train is too long */
             gap: 0; /* Ensure no gaps between images */
+            width: 100%; /* Ensure it takes full available width */
         }
         .train-part-wrapper {
             flex-shrink: 0; /* Prevent shrinking */
@@ -183,6 +191,35 @@
         .modal-close-btn:hover {
             background-color: #b91c1c; /* Red-700 */
         }
+
+        /* Orientation message styles */
+        .orientation-message {
+            display: none; /* Hidden by default */
+            position: fixed;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #fefcbf; /* Yellow-200 */
+            color: #8a6a00; /* Yellow-800 */
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            font-size: 0.9rem;
+            z-index: 100;
+            width: 80%;
+            max-width: 350px;
+        }
+
+        /* Media query for mobile portrait orientation: show the message */
+        @media (max-width: 768px) and (orientation: portrait) {
+            .orientation-message {
+                display: block;
+            }
+            body {
+                padding-bottom: 5rem; /* Make space for the message */
+            }
+        }
     </style>
 </head>
 <body>
@@ -223,6 +260,11 @@
                 <button id="modalCloseBtn" class="modal-close-btn">Close</button>
             </div>
         </div>
+    </div>
+
+    <!-- Orientation message for mobile users -->
+    <div class="orientation-message">
+        <p>For a better view of your train, please rotate your device horizontally.</p>
     </div>
 
     <script>
