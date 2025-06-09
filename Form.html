@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trackless Train Builder</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light blue-gray background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 1rem; /* Rounded corners for the main container */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            max-width: 90%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            box-sizing: border-box;
+        }
+        .option-panel, .train-display {
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem; /* Rounded corners for panels */
+            padding: 1.5rem;
+            background-color: #fbfdff;
+        }
+        .train-display {
+            min-height: 150px; /* Minimum height for the train display area */
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Center horizontally if few items */
+            flex-wrap: nowrap; /* Prevent wrapping if too many images for one line */
+            overflow-x: auto; /* Allow horizontal scrolling if train is too long */
+            gap: 0; /* Ensure no gaps between images */
+        }
+        .train-part-wrapper {
+            flex-shrink: 0; /* Prevent shrinking */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end; /* Align label to the bottom */
+            height: 100%; /* Take full height of train-display */
+            position: relative;
+            cursor: pointer;
+            border: 1px solid transparent; /* Border for hover/active state */
+            transition: border-color 0.2s;
+            box-sizing: border-box; /* Include padding/border in element's total width/height */
+        }
+        .train-part-wrapper:hover {
+            border-color: #93c5fd; /* Blue-300 on hover */
+        }
+        .train-part-wrapper.active {
+            border-color: #3b82f6; /* Blue-500 when active/selected */
+        }
+        .train-part-image {
+            max-height: 120px; /* Consistent height for all train images */
+            width: auto; /* Maintain aspect ratio */
+            object-fit: contain; /* Ensure image fits within bounds without cropping */
+            display: block; /* Remove extra space below image */
+            margin: 0; /* Remove any default margins */
+        }
+        .placeholder-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 120px; /* Match image height */
+            width: 150px; /* Placeholder width for better visual */
+            border: 2px dashed #cbd5e0; /* Gray-300 dashed border */
+            border-radius: 0.5rem;
+            background-color: #f8fafc; /* Light background for placeholder */
+            color: #94a3b8; /* Gray-400 text color */
+            font-size: 0.875rem; /* text-sm */
+            text-align: center;
+            line-height: 1.25;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .placeholder-box:hover {
+            background-color: #eff6ff; /* Blue-50 on hover */
+            border-color: #60a5fa; /* Blue-400 on hover */
+        }
+        .part-label {
+            margin-top: 0.5rem;
+            font-size: 0.875rem; /* text-sm */
+            color: #475569; /* Slate-600 */
+            white-space: nowrap; /* Prevent label from wrapping */
+        }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+        .modal.open .modal-content {
+            transform: translateY(0);
+        }
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700; /* text-2xl font-bold */
+            margin-bottom: 1.5rem;
+            color: #1e293b; /* Slate-800 */
+        }
+        .modal-options {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .modal-option-btn {
+            background-color: #eff6ff; /* Blue-50 */
+            border: 1px solid #bfdbfe; /* Blue-200 */
+            border-radius: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            font-size: 1rem;
+            font-weight: 500; /* Medium */
+            color: #2563eb; /* Blue-700 */
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .modal-option-btn:hover {
+            background-color: #dbeafe; /* Blue-100 */
+            border-color: #93c5fd; /* Blue-300 */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .modal-option-btn img {
+            max-height: 80px;
+            width: auto;
+            border-radius: 0.25rem;
+        }
+        .modal-close-btn {
+            background-color: #dc2626; /* Red-600 */
+            color: #ffffff;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            margin-top: 2rem;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600; /* Semi-bold */
+            transition: background-color 0.2s;
+        }
+        .modal-close-btn:hover {
+            background-color: #b91c1c; /* Red-700 */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-4">Trackless Train Customizer</h1>
+
+        <!-- Option Panel -->
+        <div class="option-panel">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Choose Your Train Configuration:</h2>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <label class="inline-flex items-center">
+                    <input type="radio" name="trainType" value="standard" class="form-radio text-blue-600 h-5 w-5" checked>
+                    <span class="ml-2 text-lg text-gray-700">Standard (3 cars)</span>
+                </label>
+                <label class="inline-flex items-center">
+                    <input type="radio" name="trainType" value="extended" class="form-radio text-blue-600 h-5 w-5">
+                    <span class="ml-2 text-lg text-gray-700">Extended (4 cars)</span>
+                </label>
+                <label class="inline-flex items-center">
+                    <input type="radio" name="trainType" value="premier" class="form-radio text-blue-600 h-5 w-5">
+                    <span class="ml-2 text-lg text-gray-700">Premier (5 cars)</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Train Display Area -->
+        <div class="train-display" id="trainDisplay">
+            <!-- Train images will be rendered here -->
+        </div>
+
+        <!-- Image Selection Modal -->
+        <div id="imageSelectionModal" class="modal">
+            <div class="modal-content">
+                <h3 class="modal-title">Select a Train Part</h3>
+                <div id="modalOptions" class="modal-options">
+                    <!-- Image options will be loaded here dynamically -->
+                </div>
+                <button id="modalCloseBtn" class="modal-close-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // *** IMPORTANT: REPLACE THESE PLACEHOLDER URLs WITH YOUR ACTUAL RAW GITHUB IMAGE URLs ***
+        // Example for Loco.jpg: 'https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME/main/Loco.jpg'
+        // Example for Blue Car.jpg: 'https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME/main/Blue%20Car.jpg'
+        // (Note the %20 for space in "Blue Car.jpg" if your filename includes spaces)
+        const IMAGES = {
+            loco: 'https://raw.githubusercontent.com/QuietExile/my-web-assets/main/Loco.jpg',
+            blueCar: 'https://raw.githubusercontent.com/QuietExile/my-web-assets/main/Blue%20Car.jpg',
+            greenCar: 'https://raw.githubusercontent.com/QuietExile/my-web-assets/main/Green%20Car.jpg'
+        };
+
+        const trainDisplay = document.getElementById('trainDisplay');
+        const trainTypeRadios = document.querySelectorAll('input[name="trainType"]');
+        const imageSelectionModal = document.getElementById('imageSelectionModal');
+        const modalOptions = document.getElementById('modalOptions');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
+
+        let currentTrainComposition = []; // Stores URLs of selected images
+        let currentPartIndex = -1; // Index of the train part being customized
+
+        // Function to render the train based on current composition
+        function renderTrain() {
+            trainDisplay.innerHTML = ''; // Clear existing train parts
+
+            if (currentTrainComposition.length === 0) {
+                // Display a message if no train parts are selected yet
+                const message = document.createElement('p');
+                message.className = 'text-gray-500 text-lg';
+                message.textContent = 'Select a train configuration above to start building!';
+                trainDisplay.appendChild(message);
+                return;
+            }
+
+            currentTrainComposition.forEach((imageSrc, index) => {
+                const partWrapper = document.createElement('div');
+                partWrapper.className = 'train-part-wrapper group'; // Add group for hover effects
+                partWrapper.dataset.index = index; // Store index for later reference
+
+                let partLabelText = '';
+                if (index === 0) {
+                    partLabelText = 'Locomotive';
+                } else {
+                    partLabelText = `Passenger Car #${index}`;
+                }
+
+                if (imageSrc === 'placeholder') {
+                    // Create a placeholder box if no image has been selected yet
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'placeholder-box';
+                    placeholder.innerHTML = `<span class="block">${partLabelText}</span><span class="block">Click to Select</span>`;
+                    partWrapper.appendChild(placeholder);
+                } else {
+                    // Create an image element
+                    const img = document.createElement('img');
+                    img.src = imageSrc;
+                    img.alt = partLabelText;
+                    img.className = 'train-part-image';
+                    // Fallback for image loading error
+                    img.onerror = () => {
+                        img.src = `https://placehold.co/120x150/A0A0A0/FFFFFF?text=Error`; // Generic error placeholder
+                        img.alt = 'Image Load Error';
+                    };
+                    partWrapper.appendChild(img);
+                }
+
+                // Add label below the image/placeholder
+                const label = document.createElement('span');
+                label.className = 'part-label';
+                label.textContent = partLabelText;
+                partWrapper.appendChild(label);
+
+                // Add click listener to open modal for selection
+                partWrapper.addEventListener('click', () => openImageSelectionModal(index));
+                trainDisplay.appendChild(partWrapper);
+            });
+        }
+
+        // Function to update train configuration based on radio button selection
+        function updateTrainConfiguration() {
+            const selectedType = document.querySelector('input[name="trainType"]:checked').value;
+            let numCars = 0;
+            switch (selectedType) {
+                case 'standard':
+                    numCars = 3; // Locomotive + 2 Passenger Cars
+                    break;
+                case 'extended':
+                    numCars = 4; // Locomotive + 3 Passenger Cars
+                    break;
+                case 'premier':
+                    numCars = 5; // Locomotive + 4 Passenger Cars
+                    break;
+            }
+
+            // Initialize or adjust currentTrainComposition
+            const newComposition = [];
+            for (let i = 0; i < numCars; i++) {
+                if (i < currentTrainComposition.length) {
+                    // Keep existing selection if within bounds and type matches expected car type
+                    if (i === 0) { // For the locomotive slot
+                        newComposition.push(currentTrainComposition[i] === IMAGES.loco ? IMAGES.loco : 'placeholder');
+                    } else { // For passenger car slots
+                        newComposition.push((currentTrainComposition[i] === IMAGES.blueCar || currentTrainComposition[i] === IMAGES.greenCar) ? currentTrainComposition[i] : 'placeholder');
+                    }
+                } else {
+                    // Add new placeholders for newly added slots
+                    newComposition.push('placeholder');
+                }
+            }
+            currentTrainComposition = newComposition;
+            renderTrain();
+        }
+
+        // Function to open the image selection modal
+        function openImageSelectionModal(index) {
+            currentPartIndex = index;
+            modalOptions.innerHTML = ''; // Clear previous options
+
+            const partLabel = index === 0 ? 'Locomotive' : `Passenger Car #${index}`;
+            document.querySelector('.modal-title').textContent = `Select for ${partLabel}`;
+
+            if (index === 0) {
+                // Locomotive - only Loco.jpg allowed
+                const locoOption = document.createElement('button');
+                locoOption.className = 'modal-option-btn';
+                locoOption.innerHTML = `<img src="${IMAGES.loco}" alt="Locomotive"><span class="block">Locomotive</span>`;
+                locoOption.addEventListener('click', () => selectImage(IMAGES.loco));
+                modalOptions.appendChild(locoOption);
+            } else {
+                // Passenger Car - Blue or Green Car allowed
+                const blueCarOption = document.createElement('button');
+                blueCarOption.className = 'modal-option-btn';
+                blueCarOption.innerHTML = `<img src="${IMAGES.blueCar}" alt="Blue Car"><span class="block">Blue Car</span>`;
+                blueCarOption.addEventListener('click', () => selectImage(IMAGES.blueCar));
+                modalOptions.appendChild(blueCarOption);
+
+                const greenCarOption = document.createElement('button');
+                greenCarOption.className = 'modal-option-btn';
+                greenCarOption.innerHTML = `<img src="${IMAGES.greenCar}" alt="Green Car"><span class="block">Green Car</span>`;
+                greenCarOption.addEventListener('click', () => selectImage(IMAGES.greenCar));
+                modalOptions.appendChild(greenCarOption);
+            }
+
+            imageSelectionModal.classList.add('open');
+        }
+
+        // Function to select an image from the modal and update the train
+        function selectImage(imageSrc) {
+            if (currentPartIndex !== -1) {
+                currentTrainComposition[currentPartIndex] = imageSrc;
+                renderTrain();
+                closeImageSelectionModal();
+            }
+        }
+
+        // Function to close the image selection modal
+        function closeImageSelectionModal() {
+            imageSelectionModal.classList.remove('open');
+            currentPartIndex = -1; // Reset index
+        }
+
+        // Event Listeners
+        trainTypeRadios.forEach(radio => {
+            radio.addEventListener('change', updateTrainConfiguration);
+        });
+
+        modalCloseBtn.addEventListener('click', closeImageSelectionModal);
+        // Close modal if clicked outside content
+        imageSelectionModal.addEventListener('click', (event) => {
+            if (event.target === imageSelectionModal) {
+                closeImageSelectionModal();
+            }
+        });
+
+        // Initial render when the page loads
+        document.addEventListener('DOMContentLoaded', updateTrainConfiguration);
+    </script>
+</body>
+</html>
